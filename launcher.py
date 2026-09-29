@@ -6,8 +6,7 @@ import sys
 import os
 import base64
 
-# 3D 프린트 뷰어 전용 런처 — server.py만 띄운다. Tailscale Funnel(외부/공개 접속)은 여기서
-# 안 쓴다 — 사내망 IP로만 접속하면 충분한 인스턴스(예: 사무실 미니PC) 기준.
+# 3D 프린트 뷰어 전용 런처 — server.py만 띄운다. 사내망 IP로 접속하는 사내 PC(예: 사무실 미니PC) 기준.
 # 절대경로 대신 이 스크립트 파일 위치 기준 상대경로를 써서, 어느 경로에 clone해도 동작한다.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 

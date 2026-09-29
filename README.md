@@ -48,7 +48,6 @@ Creality 3D 프린터 14대를 한 화면에서 실시간으로 모니터링하�
 ├── index.html                       # 단일 페이지 앱 마크업
 ├── style.css                        # 테마(다크/라이트), 애니메이션, 토스트, 레이아웃
 ├── app.js                           # 모든 UI 로직 (폴링, 뷰어, PIP 등)
-├── three_d_print_state.json         # 서버 전체 켜기/끄기 토글 상태 (gitignore됨)
 ├── launcher.py                      # 서버 실행 + 브라우저/알림 띄우는 런처
 ├── control.hta / start.vbs / tray.ps1  # 데스크톱 트레이 컨트롤 패널 (선택사항)
 ├── setup.bat                        # 새 컴퓨터에 처음 설치할 때 실행 (clone·의존성·자동시작 등록)

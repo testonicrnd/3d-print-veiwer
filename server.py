@@ -71,45 +71,6 @@ def ws_call_history(ip, timeout=6):
     except Exception as e:
         return {"error": str(e)}
 
-# 이 서버 전체(/, /style.css, /app.js, /proxy/*, /api/*)를 통째로 끌 수 있는 스위치.
-# 저장소 루트의 JSON 파일에 상태를 저장해서, 재시작 없이 다음 요청부터 바로 반영된다.
-# 이 스위치는 어디까지나 "공개(Tailscale Funnel) 노출"만 막는 용도라, Funnel 도메인으로 들어온
-# 요청만 차단하고 localhost/사내 LAN IP로 직접 접속한 요청은 토글 상태와 무관하게 항상 허용한다.
-THREE_D_PRINT_STATE_FILE = os.path.join(BASE_DIR, "three_d_print_state.json")
-_3d_print_state_cache = {"mtime": None, "enabled": None}
-_3D_PRINT_EXACT_PATHS = {"/", "/style.css", "/app.js"}
-_3D_PRINT_PREFIXES = ("/proxy/", "/api/")
-FUNNEL_HOST = "user.tail1e87bb.ts.net"
-
-def _default_3d_print_enabled():
-    return os.environ.get("ENABLE_3D_PRINT", "1").lower() not in ("0", "false")
-
-def is_3d_print_enabled():
-    try:
-        mtime = os.path.getmtime(THREE_D_PRINT_STATE_FILE)
-    except OSError:
-        mtime = None
-    if mtime != _3d_print_state_cache["mtime"]:
-        try:
-            with open(THREE_D_PRINT_STATE_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            _3d_print_state_cache["enabled"] = bool(data.get("enabled", True))
-        except Exception:
-            _3d_print_state_cache["enabled"] = _default_3d_print_enabled()
-        _3d_print_state_cache["mtime"] = mtime
-    return _3d_print_state_cache["enabled"]
-
-@app.before_request
-def _block_3d_print_routes():
-    if is_3d_print_enabled():
-        return None
-    # Funnel 도메인으로 온 요청이 아니면(= localhost나 LAN IP로 직접 접속) 토글이 꺼져 있어도 막지 않는다
-    if (freq.host or "").split(":")[0] != FUNNEL_HOST:
-        return None
-    if freq.path in _3D_PRINT_EXACT_PATHS or freq.path.startswith(_3D_PRINT_PREFIXES):
-        return "3D 프린트 서버가 꺼져 있습니다", 404
-    return None
-
 @app.route("/")
 def index():
     resp = send_file(os.path.join(BASE_DIR, "index.html"))

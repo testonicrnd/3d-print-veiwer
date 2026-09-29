@@ -2,4 +2,3 @@
 __pycache__/
 *.pyc
 .claude/settings.local.json
-three_d_print_state.json

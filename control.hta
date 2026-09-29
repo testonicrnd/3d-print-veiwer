@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>AIRMAX Server Control</title>
+<HTA:APPLICATION
+  ID="AirmaxControl"
+  APPLICATIONNAME="AIRMAX Server Control"
+  SCROLL="no"
+  SINGLEINSTANCE="yes"
+  WINDOWSTATE="normal"
+  INNERBORDER="no"
+  BORDER="none"
+  CAPTION="no"
+  SHOWINTASKBAR="no"
+/>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  body {
+    background:#18181b;
+    color:#ececec;
+    font-family:"Malgun Gothic","Segoe UI",sans-serif;
+    font-size:14px;
+    overflow:hidden;
+    border:1px solid #2e2e35;
+    user-select:none;
+    -ms-user-select:none;
+  }
+  #dragStrip {
+    height:6px;
+    background:#2a2a2e;
+    cursor:move;
+    border-bottom:1px solid #333;
+  }
+  #topRow {
+    padding:4px 12px 8px 12px;
+    white-space:nowrap;
+    cursor:default;
+  }
+  #dot {
+    display:inline-block;
+    width:10px; height:10px;
+    border-radius:50%;
+    background:#555;
+    margin-right:8px;
+    vertical-align:middle;
+  }
+  #dot.on  { background:#22c55e; box-shadow:0 0 6px #22c55e; }
+  #dot.off { background:#ef4444; }
+  #srvTitle  { font-weight:700; font-size:14px; color:#ececec; vertical-align:middle; }
+  #srvStatus { font-size:12px; vertical-align:middle; margin-left:7px; color:#888; }
+  #srvStatus.on  { color:#22c55e; }
+  #srvStatus.off { color:#ef4444; }
+  #btnRow {
+    padding:0 14px 14px 14px;
+    display:none;
+    overflow:hidden;
+  }
+  .btn {
+    padding:8px 0;
+    border:none;
+    border-radius:5px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    color:#fff;
+    font-family:"Malgun Gothic","Segoe UI",sans-serif;
+    float:left;
+    width:49%;
+  }
+  #btnStart   { background:#22c55e; width:100%; display:none; float:none; }
+  #btnRestart { background:#0ea5e9; }
+  #btnStop    { background:#ef4444; margin-left:2%; }
+  #btnStart:hover   { background:#16a34a; }
+  #btnRestart:hover { background:#0284c7; }
+  #btnStop:hover    { background:#dc2626; }
+</style>
+</head>
+<body>
+
+
+<div id="dragStrip"></div>
+<div id="topRow" onselectstart="return false">
+  <span id="dot"></span>
+  <span id="srvTitle">AIRMAX 서버</span>
+  <span id="srvStatus"></span>
+</div>
+
+<div id="btnRow">
+  <button class="btn" id="btnStart"   onclick="doStart()">시작</button>
+  <button class="btn" id="btnRestart" onclick="doRestart()">재시작</button>
+  <button class="btn" id="btnStop"    onclick="doStop()">종료</button>
+</div>
+
+<script language="JavaScript">
+  var _txt = ["확인 중...","실행 중","중지됨","재시작 중...","종료 중...","시작 중..."];
+  function getT(n) { return _txt[n]; }
+</script>
+
+<script language="VBScript">
+
+Dim oShell, oFso
+Set oShell = CreateObject("WScript.Shell")
+Set oFso   = CreateObject("Scripting.FileSystemObject")
+
+' 이 HTA 파일이 어느 경로에 있든(어느 컴퓨터에 clone했든) 항상 자기 자신과 같은 폴더의
+' start.vbs / tray.ps1을 가리키도록, 하드코딩된 절대경로 대신 여기서 직접 계산한다.
+Function ScriptDir()
+    Dim p
+    p = document.location.pathname
+    p = Replace(p, "/", "\")
+    If Left(p, 1) = "\" And Mid(p, 3, 1) = ":" Then p = Mid(p, 2)
+    ScriptDir = oFso.GetParentFolderName(p)
+End Function
+
+Function T(n)
+    T = getT(n)
+End Function
+
+Sub RunPS(cmd)
+    oShell.Run "powershell -WindowStyle Hidden -NonInteractive -Command """ & cmd & """", 0, True
+End Sub
+
+Sub SetRunning(isRunning)
+    On Error Resume Next
+    If isRunning Then
+        document.getElementById("dot").className             = "on"
+        document.getElementById("srvStatus").innerText       = T(1)
+        document.getElementById("srvStatus").className       = "on"
+        document.getElementById("btnRow").style.display      = "block"
+        document.getElementById("btnStart").style.display    = "none"
+        document.getElementById("btnRestart").style.display  = "inline-block"
+        document.getElementById("btnStop").style.display     = "inline-block"
+        window.resizeTo 280, 110
+        window.moveTo window.screenLeft, screen.availHeight - 130
+    Else
+        document.getElementById("dot").className             = "off"
+        document.getElementById("srvStatus").innerText       = T(2)
+        document.getElementById("srvStatus").className       = "off"
+        document.getElementById("btnRow").style.display      = "block"
+        document.getElementById("btnStart").style.display    = "block"
+        document.getElementById("btnRestart").style.display  = "none"
+        document.getElementById("btnStop").style.display     = "none"
+        window.resizeTo 280, 110
+        window.moveTo window.screenLeft, screen.availHeight - 130
+    End If
+End Sub
+
+Sub checkStatus()
+    On Error Resume Next
+    Dim xhr
+    Set xhr = CreateObject("MSXML2.XMLHTTP")
+    xhr.open "GET", "http://localhost:8080/", False
+    xhr.setRequestHeader "Cache-Control", "no-cache"
+    xhr.send
+    If Err.Number = 0 And xhr.Status = 200 Then
+        SetRunning True
+    Else
+        SetRunning False
+    End If
+    Err.Clear
+    On Error GoTo 0
+End Sub
+
+Sub doStart()
+    On Error Resume Next
+    document.getElementById("btnStart").style.display  = "none"
+    document.getElementById("dot").className           = ""
+    document.getElementById("srvStatus").innerText     = T(5)
+    document.getElementById("srvStatus").className     = ""
+    oShell.Run "C:\Windows\System32\wscript.exe """ & ScriptDir() & "\start.vbs""", 0, False
+    WScript.Sleep 6000
+    checkStatus
+End Sub
+
+Sub doRestart()
+    On Error Resume Next
+    document.getElementById("btnRestart").style.display = "none"
+    document.getElementById("btnStop").style.display    = "none"
+    document.getElementById("dot").className            = ""
+    document.getElementById("srvStatus").innerText      = T(3)
+    document.getElementById("srvStatus").className      = ""
+    RunPS "Stop-Process -Id (Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1).OwningProcess -Force -ErrorAction SilentlyContinue"
+    RunPS "Get-Process pythonw -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"
+    WScript.Sleep 1500
+    oShell.Run "C:\Windows\System32\wscript.exe """ & ScriptDir() & "\start.vbs""", 0, False
+    WScript.Sleep 6000
+    checkStatus
+End Sub
+
+Sub doStop()
+    On Error Resume Next
+    document.getElementById("btnRestart").style.display = "none"
+    document.getElementById("btnStop").style.display    = "none"
+    document.getElementById("dot").className            = ""
+    document.getElementById("srvStatus").innerText      = T(4)
+    document.getElementById("srvStatus").className      = ""
+    RunPS "Stop-Process -Id (Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1).OwningProcess -Force -ErrorAction SilentlyContinue"
+    RunPS "Get-Process pythonw -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue"
+    window.close
+End Sub
+
+Sub timerTick()
+    checkStatus
+End Sub
+
+</script>
+
+<script language="JavaScript">
+  var strip = document.getElementById("dragStrip");
+  var dragging = false, startX, startY, winX, winY;
+
+  strip.attachEvent("onmousedown", function() {
+    dragging = true;
+    startX = window.event.screenX;
+    startY = window.event.screenY;
+    winX   = window.screenLeft;
+    winY   = window.screenTop;
+    document.attachEvent("onmousemove", onDrag);
+    document.attachEvent("onmouseup",   stopDrag);
+  });
+
+  function onDrag() {
+    if (!dragging) return;
+    window.moveTo(winX + window.event.screenX - startX, winY + window.event.screenY - startY);
+  }
+
+  function stopDrag() {
+    dragging = false;
+    document.detachEvent("onmousemove", onDrag);
+    document.detachEvent("onmouseup",   stopDrag);
+  }
+
+  window.onload = function() {
+    window.resizeTo(280, 60);
+    window.moveTo(screen.width - 300, screen.availHeight - 130);
+    document.getElementById("srvStatus").innerText = getT(0);
+    checkStatus();
+    setInterval("timerTick()", 5000);
+    // 트레이 아이콘 실행 (VBScript의 ScriptDir()를 그대로 재사용)
+    var sh = new ActiveXObject("WScript.Shell");
+    sh.Run("powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File \"" + ScriptDir() + "\\tray.ps1\"", 0, false);
+  };
+</script>
+</body>
+</html>

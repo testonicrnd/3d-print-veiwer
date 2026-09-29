@@ -65,6 +65,14 @@ Creality 3D 프린터 14대를 한 화면에서 실시간으로 모니터링하�
 
 Git과 Python이 설치되어 있어야 합니다(설치 시 "Add python.exe to PATH" 체크 필요).
 
+## 자동 업데이트
+
+`main`에 푸시하면 사내 PC가 1시간 안에 자동으로 받아서 적용합니다(`3DPrintViewerAutoUpdate` 작업).
+
+- `update.ps1`이 `git fetch` 후 `origin/main`으로 맞추고(`reset --hard`), 코드가 바뀐 경우에만 패키지 설치 + 서버 재시작
+- 로컬 수정은 버려지고 `.env` 같은 추적되지 않는 파일은 유지됨
+- 바로 적용하려면: `Start-ScheduledTask -TaskName '3DPrintViewerAutoUpdate'` 또는 `update.ps1` 더블클릭 실행
+
 ## 수동 실행
 
 ```bash

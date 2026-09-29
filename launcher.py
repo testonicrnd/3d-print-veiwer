@@ -61,6 +61,8 @@ time.sleep(2)
 lan_ip = get_lan_ip()
 print_url = f"http://{lan_ip}:8080/"
 notify("3D 프린트 서버", f"준비 완료\n{print_url}")
-webbrowser.open(print_url)
+# 자동 업데이트(update.ps1)로 재시작될 때는 --no-browser로 띄워서, 업데이트마다 탭이 쌓이지 않게 한다
+if "--no-browser" not in sys.argv:
+    webbrowser.open(print_url)
 
 flask_proc.wait()

@@ -24,19 +24,27 @@ try {
 
     $before = git rev-parse HEAD
 
+    Write-Host "-- git fetch --"
+    git fetch origin main
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] git fetch failed (network?). Keeping current version."
+        exit 1
+    }
+
     # This checkout only ever exists to mirror GitHub - there's no legitimate reason for
-    # local edits to any tracked file here. Discard them first so a stray local change
-    # (e.g. line-ending conversion) can never block the pull below.
-    git checkout -- .
-
-    Write-Host "-- git pull --"
-    git pull origin main
-
-    Write-Host "-- installing python dependencies --"
-    python -m pip install -r requirements.txt
+    # local edits to any tracked file here. Hard-reset to origin/main instead of pulling
+    # so neither a stray local change (e.g. line-ending conversion) nor a force-pushed
+    # (rewritten) history on GitHub can ever block the update. Untracked files like .env
+    # are left alone.
+    git reset --hard origin/main
 
     $after = git rev-parse HEAD
     $codeChanged = $before -ne $after
+
+    if ($codeChanged) {
+        Write-Host "-- updated $($before.Substring(0,7)) -> $($after.Substring(0,7)), installing python dependencies --"
+        python -m pip install -r requirements.txt
+    }
     $serverRunning = [bool](Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue)
 
     if (-not $codeChanged -and $serverRunning) {
@@ -48,7 +56,7 @@ try {
             Select-Object -ExpandProperty OwningProcess -Unique |
             ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
         Start-Sleep -Seconds 1
-        Start-Process -FilePath (Get-Command pythonw.exe).Source -ArgumentList "`"$repoDir\launcher.py`"" -WorkingDirectory $repoDir
+        Start-Process -FilePath (Get-Command pythonw.exe).Source -ArgumentList "`"$repoDir\launcher.py`" --no-browser" -WorkingDirectory $repoDir
     }
 
     Write-Host "Done."

@@ -3,7 +3,7 @@ rem TESTONIC R&D - 3D Print Viewer
 setlocal
 
 rem One-time setup for a new PC: clones the repo, installs dependencies,
-rem and registers auto-start on login + hourly auto-update.
+rem and registers auto-start on login + auto-update every 10 minutes.
 rem
 rem NOTE: avoid forward "goto" after external commands (git, pip) inside
 rem parenthesized if/else blocks - it can break cmd.exe's label lookup.
@@ -64,7 +64,7 @@ echo Registering auto-start on login (with auto-retry if it crashes)...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%REPO_DIR%\register_startup_task.ps1"
 
 echo.
-echo Registering hourly auto-update check (pulls GitHub, restarts only if changed)...
+echo Registering auto-update check every 10 minutes (pulls GitHub, restarts only if changed)...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%REPO_DIR%\register_auto_update_task.ps1"
 
 echo.
@@ -76,7 +76,7 @@ echo ===============================================
 echo   Setup complete! Check the notification/browser
 echo   that should appear shortly.
 echo   From now on it starts automatically on login,
-echo   and checks GitHub for updates every hour on its own.
+echo   and checks GitHub for updates every 10 minutes.
 echo ===============================================
 pause
 exit /b 0

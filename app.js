@@ -23,12 +23,14 @@ const AUTO_DELAY  = 30_000;
 const THUMB_MS    = 1000;
 const RETRY_MS    = 10_000;
 const STATUS_MS   = 5000;
+const VERSION_MS  = 10_000;
 
 /* ══════════════════════════════════════════
    DOM REFS
 ══════════════════════════════════════════ */
 const html            = document.documentElement;
 const mainEl          = document.querySelector(".main");
+const updateBadgeBtn  = document.getElementById("updateBadgeBtn");
 const errorBadgeBtn   = document.getElementById("errorBadgeBtn");
 const errorBanner     = document.getElementById("errorBanner");
 const errorCountEl    = document.getElementById("errorCount");
@@ -90,8 +92,9 @@ const brokenSet   = new Set();
 let allViewers    = [];
 let activeViewers = [];
 
-// 새로고침 후에도 확대 중이던 프린터를 복원하기 위해 저장
+// 새로고침 후에도 확대 중이던 프린터와 핀 고정 상태를 복원하기 위해 저장
 const FOCUS_IP_KEY = "print-viewer-focus-ip";
+const PINNED_KEY   = "print-viewer-pinned";
 
 /* ══════════════════════════════════════════
    INIT — BUILD PRINTER CARDS
@@ -301,7 +304,7 @@ function scheduleNext() {
   if (isPinned || isInfoOpen || isFileOpen || activeViewers.length === 0 || currentIndex === -1) return;
   startProgress();
   autoTimer = setTimeout(() => {
-    if (isPinned || currentIndex === -1) return;
+    if (isPinned || currentIndex === -1 || activeViewers.length === 0) return;
     const cur  = activeViewers.indexOf(allViewers[currentIndex]);
     const next = (cur < 0 ? 0 : cur + 1) % activeViewers.length;
     openFocus(activeViewers[next]);
@@ -883,7 +886,11 @@ function setPinned(pinned) {
   }
 }
 
-pinBtn.addEventListener("click", () => setPinned(!isPinned));
+// PIP가 내부적으로 거는 고정은 저장하지 않도록, 사용자가 버튼을 눌렀을 때만 저장
+pinBtn.addEventListener("click", () => {
+  setPinned(!isPinned);
+  localStorage.setItem(PINNED_KEY, isPinned ? "1" : "0");
+});
 
 allViewers.forEach(v => {
   v.addEventListener("click", () => {
@@ -927,14 +934,57 @@ window.addEventListener("keydown", e => {
 });
 
 /* ══════════════════════════════════════════
+   SERVER WATCH — 자동 업데이트 대응
+   서버가 재시작되면 확대 스트림만 다시 연결하고(페이지 새로고침 없음),
+   화면 코드가 바뀌면 "새 버전" 배지를 띄워 사용자가 원할 때 적용
+══════════════════════════════════════════ */
+let assetVersion = null;
+let serverBoot   = null;
+let serverDown   = false;
+let streamStale  = false;
+
+function reconnectFocus() {
+  if (currentIndex === -1) return;
+  const ip = allViewers[currentIndex].dataset.ip;
+  streamStale = false;
+  focusImg.onload  = () => { focusImg.onload = null; focusImg.onerror = null; };
+  focusImg.onerror = () => { focusImg.onload = null; focusImg.onerror = null; streamStale = true; };
+  focusImg.src = `/proxy/${ip}/?action=stream&_r=${Date.now()}`;
+}
+
+async function checkServer() {
+  let data;
+  try {
+    const r = await fetch("/api/version", { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    data = await r.json();
+  } catch(e) {
+    serverDown = true;
+    return;
+  }
+  if (assetVersion === null) assetVersion = data.version;
+  else if (data.version !== assetVersion) updateBadgeBtn.classList.add("show");
+
+  const restarted = serverBoot !== null && (data.boot !== serverBoot || serverDown);
+  if (restarted || streamStale) reconnectFocus();
+  serverBoot = data.boot;
+  serverDown = false;
+}
+
+updateBadgeBtn.addEventListener("click", () => location.reload());
+
+/* ══════════════════════════════════════════
    INIT
 ══════════════════════════════════════════ */
 allViewers.forEach(v => startThumbPoll(v));
 setTimeout(pollStatuses, 1500);
 setInterval(pollStatuses, STATUS_MS);
+checkServer();
+setInterval(checkServer, VERSION_MS);
 
-// 확대 중이던 프린터 복원
+// 확대 중이던 프린터와 핀 고정 상태 복원
 (function restoreFocus() {
+  if (localStorage.getItem(PINNED_KEY) === "1") setPinned(true);
   const savedIp = localStorage.getItem(FOCUS_IP_KEY);
   if (!savedIp) return;
   const viewer = activeViewers.find(v => v.dataset.ip === savedIp);

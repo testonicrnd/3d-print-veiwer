@@ -57,7 +57,7 @@
 ├── setup.bat                        # 새 PC 최초 설치 (clone · 의존성 · 자동 시작/업데이트 등록)
 ├── update.ps1                       # GitHub 최신 코드로 동기화, 바뀐 경우만 재시작
 ├── register_startup_task.ps1        # 로그인 시 자동 시작 등록 (setup.bat이 실행)
-└── register_auto_update_task.ps1    # 매시간 자동 업데이트 등록 (setup.bat이 실행)
+└── register_auto_update_task.ps1    # 10분마다 자동 업데이트 등록 (setup.bat이 실행)
 ```
 
 ---
@@ -65,13 +65,13 @@
 ## 새 PC에 설치하기
 
 `setup.bat` 하나만 받아서 더블클릭하면 됩니다. 저장소 clone, 파이썬 패키지 설치,
-로그인 시 자동 시작, 매시간 자동 업데이트 등록까지 한 번에 처리합니다.
+로그인 시 자동 시작, 10분마다 자동 업데이트 등록까지 한 번에 처리합니다.
 
 Git과 Python이 설치되어 있어야 합니다(Python 설치 시 "Add python.exe to PATH" 체크).
 
 ## 자동 업데이트
 
-`main`에 푸시하면 사내 PC가 1시간 안에 자동으로 받아서 적용합니다(`3DPrintViewerAutoUpdate` 작업).
+`main`에 푸시하면 사내 PC가 10분 안에 자동으로 받아서 적용합니다(`3DPrintViewerAutoUpdate` 작업).
 
 - `update.ps1`이 `git fetch` 후 `origin/main`으로 맞추고(`reset --hard`), 코드가 바뀐 경우에만 패키지 설치 + 서버 재시작
 - 로컬 수정은 버려지고, git이 관리하지 않는 파일은 유지

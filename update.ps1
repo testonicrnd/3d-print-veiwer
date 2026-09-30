@@ -49,6 +49,16 @@ try {
         Start-Process -FilePath (Get-Command pythonw.exe).Source -ArgumentList "`"$repoDir\launcher.py`" --no-browser" -WorkingDirectory $repoDir
     }
 
+    # If the task definition itself changed (e.g. check interval), re-register it so the
+    # PC picks it up without a manual re-run. Done last, since it replaces the running task.
+    if ($codeChanged) {
+        git diff --quiet $before $after -- register_auto_update_task.ps1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "-- auto-update task changed, re-registering --"
+            & "$repoDir\register_auto_update_task.ps1"
+        }
+    }
+
     Write-Host "Done."
 } catch {
     Write-Host "[ERROR] $($_.Exception.Message)"

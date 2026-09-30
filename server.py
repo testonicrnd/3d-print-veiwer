@@ -4,9 +4,23 @@ import requests
 import websocket
 import json
 import os
+import hashlib
+import uuid
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 화면 파일(index.html/style.css/app.js) 해시 — 바뀌면 열려 있는 페이지에 "새 버전" 배지를 띄움
+def _asset_version():
+    h = hashlib.sha1()
+    for name in ("index.html", "style.css", "app.js"):
+        with open(os.path.join(BASE_DIR, name), "rb") as f:
+            h.update(f.read())
+    return h.hexdigest()[:12]
+
+ASSET_VERSION = _asset_version()
+# 서버 실행마다 바뀌는 값 — 바뀌면 페이지가 서버 재시작을 알아채고 확대 스트림을 다시 연결함
+BOOT_ID = uuid.uuid4().hex
 
 ALLOWED_IPS = {
     "192.168.0.24", "192.168.0.33", "192.168.0.11", "192.168.0.22",
@@ -85,6 +99,12 @@ def serve_css():
 def serve_js():
     resp = send_file(os.path.join(BASE_DIR, "app.js"), mimetype="application/javascript")
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return resp
+
+@app.route("/api/version")
+def version():
+    resp = Response(json.dumps({"version": ASSET_VERSION, "boot": BOOT_ID}), content_type="application/json")
+    resp.headers["Cache-Control"] = "no-store"
     return resp
 
 @app.route("/proxy/<ip>/")

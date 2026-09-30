@@ -225,6 +225,22 @@ h1 span { color: var(--accent); }
   font-size: 10px; font-weight: 800; flex-shrink: 0;
 }
 
+/* ── 새 버전 뱃지 ── */
+.update-badge-btn {
+  display: none;
+  align-items: center; gap: 6px;
+  padding: 5px 14px;
+  background: var(--btn-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-full);
+  font: inherit; font-size: 11px; font-weight: 700;
+  cursor: pointer;
+  transition: all var(--duration) var(--ease);
+}
+.update-badge-btn.show { display: flex; }
+.update-badge-btn:hover { filter: brightness(1.15); }
+
 /* ── 에러 배너 ── */
 .error-banner {
   display: none;

@@ -27,13 +27,13 @@
       <div class="subtitle">LIVE SNAPSHOT MONITOR</div>
     </div>
     <div class="topbar-right">
-      <button id="updateBadgeBtn" class="update-badge-btn" title="클릭하면 새 버전을 적용합니다 (보던 화면은 유지)">🔄 새 버전</button>
+      <button id="updateBadgeBtn" class="update-badge-btn" title="클릭하면 새 버전을 적용합니다 (보던 화면은 유지)">↻ 새 버전</button>
       <div id="errorBadgeBtn" class="error-badge-btn">
         <span class="err-badge" id="errorCount">0</span>
         <span>오류</span>
       </div>
 <button class="theme-toggle" id="themeToggle">
-        <span class="icon" id="themeIcon">🌙</span>
+        <span class="icon" id="themeIcon">☾</span>
       </button>
     </div>
   </header>
@@ -43,15 +43,15 @@
 
   <!-- ── 팁바 ── -->
   <div class="tip-bar">
-    <span class="tip-desktop">💡 카메라 클릭 → 우측 확대 · 방향키 ← / → 이동 · ESC 닫기 · 🔒 핀으로 자동전환 고정</span>
-    <span class="tip-mobile">💡 카메라를 탭하면 확대됩니다 · 🔒 핀으로 고정</span>
+    <span class="tip-desktop">카메라 클릭 → 우측 확대 · 방향키 ← / → 이동 · ESC 닫기 · [고정]으로 자동 전환 멈춤</span>
+    <span class="tip-mobile">카메라를 탭하면 확대됩니다 · [고정]으로 자동 전환 멈춤</span>
   </div>
 
   <!-- ── 메인 ── -->
   <div class="main">
 
     <aside class="sidebar">
-      <div class="sidebar-label">📡 연결된 프린터 — <span id="printerCount">0</span>대</div>
+      <div class="sidebar-label">연결된 프린터 — <span id="printerCount">0</span>대</div>
       <div class="grid" id="grid"></div>
     </aside>
 
@@ -64,16 +64,16 @@
         </div>
         <div class="focus-controls">
           <button class="ctrl-btn" id="pauseResumeBtn"></button>
-          <button class="ctrl-btn" id="infoBtn">📋 출력</button>
-          <button class="ctrl-btn" id="printFileBtn">🗂 파일</button>
+          <button class="ctrl-btn" id="infoBtn">출력</button>
+          <button class="ctrl-btn" id="printFileBtn">파일</button>
           <button class="ctrl-btn" id="livePipBtn">⧉ PIP</button>
-          <button class="ctrl-btn" id="pinBtn">🔒 고정</button>
+          <button class="ctrl-btn" id="pinBtn">고정</button>
           <button class="ctrl-btn" id="closeBtn">✕ 닫기</button>
         </div>
       </div>
 
       <div class="focus-empty" id="focusEmpty">
-        <div class="empty-icon">📷</div>
+        <div class="empty-icon">◎</div>
         <div class="empty-text">카메라를 선택하면 여기에 표시됩니다</div>
       </div>
 
@@ -86,8 +86,8 @@
         <div class="print-info-bar" id="printInfoBar"></div>
         <div class="focus-info-panel" id="focusInfoPanel">
           <div class="focus-info-tabs">
-            <button class="info-tab active" data-tab="history">📋 출력 히스토리</button>
-            <button class="info-tab" data-tab="timelapse">🎬 타임랩스</button>
+            <button class="info-tab active" data-tab="history">출력 히스토리</button>
+            <button class="info-tab" data-tab="timelapse">타임랩스</button>
           </div>
           <div class="info-tab-content" id="historyContent">
             <div class="info-loading">버튼을 눌러 불러옵니다</div>
@@ -115,7 +115,7 @@
     <div class="video-modal-overlay" id="fileModalOverlay"></div>
     <div class="video-modal-box file-modal-box">
       <div class="video-modal-header">
-        <span class="video-modal-title">🗂 파일 선택</span>
+        <span class="video-modal-title">파일 선택</span>
         <button class="video-modal-close" id="fileModalClose">✕</button>
       </div>
       <div id="fileModalBody" class="file-modal-body">

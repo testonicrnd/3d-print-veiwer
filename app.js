@@ -115,7 +115,7 @@ const PINNED_KEY   = "print-viewer-pinned";
       </div>
       <div class="viewer-body">
         <img src="" alt="" />
-        <div class="viewer-badge">📷 LIVE</div>
+        <div class="viewer-badge">● LIVE</div>
       </div>
       <div class="print-strip"><div class="print-strip-fill" id="strip-${p.id}"></div></div>`;
     grid.appendChild(card);
@@ -271,7 +271,7 @@ errorBanner.addEventListener("click", e => {
 function applyTheme(t) {
   theme = t;
   html.setAttribute("data-theme", t);
-  themeIcon.textContent = t === "dark" ? "🌙" : "☀️";
+  themeIcon.textContent = t === "dark" ? "☾" : "☼";
   localStorage.setItem("tv-theme", t);
 }
 
@@ -481,16 +481,16 @@ function updateFocusPrintInfo(ip) {
 
   printInfoBar.innerHTML = `
     <span class="print-state-chip ${state}">${label}</span>
-    <span>📄 ${fileName}</span>
-    <span>⚡ ${progress}%</span>
-    <span>📐 ${layer}레이어</span>
-    <span>⏱ 남은 ${leftTime}</span>
-    <span>🌡 노즐 ${nozzle} · 베드 ${bed}</span>`;
+    <span>${fileName}</span>
+    <span>${progress}%</span>
+    <span>${layer}레이어</span>
+    <span>남은 ${leftTime}</span>
+    <span>노즐 ${nozzle} · 베드 ${bed}</span>`;
   printInfoBar.classList.add("show");
 
   pauseResumeBtn.classList.add("show");
   if (state === "printing") {
-    pauseResumeBtn.textContent    = "⏸ 일시정지";
+    pauseResumeBtn.textContent    = "❚❚ 일시정지";
     pauseResumeBtn.className      = "ctrl-btn danger show";
     pauseResumeBtn.dataset.action = "pause";
   } else {
@@ -877,11 +877,11 @@ function setPinned(pinned) {
   isPinned = pinned;
   if (isPinned) {
     pinBtn.classList.add("pin-active");
-    pinBtn.textContent = "🔓 해제";
+    pinBtn.textContent = "고정 해제";
     stopAutoSlide();
   } else {
     pinBtn.classList.remove("pin-active");
-    pinBtn.textContent = "🔒 고정";
+    pinBtn.textContent = "고정";
     startAutoSlide();
   }
 }

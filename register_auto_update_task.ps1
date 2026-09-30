@@ -1,15 +1,11 @@
-# Run once to make this machine check GitHub for updates every hour
-# automatically (pulls latest code, reinstalls deps, restarts the server only if
-# something actually changed). No more manually re-running update.ps1.
+# Registers a scheduled task that runs update.ps1 every hour
+# (syncs with GitHub, restarts the server only if the code changed).
 
 $repoDir = $PSScriptRoot
 $pythonw = (Get-Command pythonw.exe -ErrorAction SilentlyContinue).Source
 if (-not $pythonw) { $pythonw = "pythonw.exe" }
 
-# -WindowStyle Hidden + -Unattended: this fires once an hour with nobody watching,
-# so it must never show a window or wait on Read-Host for a keypress that will
-# never come (that previously left a stuck, visible PowerShell window behind
-# after every single hourly run).
+# Runs unattended: hidden window, and -Unattended so it never waits for a keypress.
 $action = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
     -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$repoDir\update.ps1`" -Unattended" `

@@ -1,8 +1,6 @@
-# Registers launcher.py to auto-start on login via Windows Task Scheduler,
-# retrying every couple minutes if it crashes.
-# (Run as Administrator: right-click Start menu -> Windows PowerShell (Admin))
-# NOTE: messages kept in plain ASCII on purpose - Korean text here has been
-# observed to garble in some console codepages.
+# Registers launcher.py to auto-start on login via Task Scheduler,
+# retrying every 2 minutes if it crashes.
+# Messages are plain ASCII - Korean text can garble in some console codepages.
 
 $repoDir = $PSScriptRoot
 $pythonw = (Get-Command pythonw.exe -ErrorAction SilentlyContinue).Source

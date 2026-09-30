@@ -90,7 +90,7 @@ let focusTimer    = null;
 let allViewers    = [];
 let activeViewers = [];
 
-// 새로고침해도 확대해서 보고 있던 프린터 화면이 그대로 유지되도록, 선택된 IP를 저장해둔다
+// 새로고침 후에도 확대 중이던 프린터를 복원하기 위해 저장
 const FOCUS_IP_KEY = "print-viewer-focus-ip";
 
 /* ══════════════════════════════════════════
@@ -938,7 +938,7 @@ allViewers.forEach(v => startThumbPoll(v));
 setTimeout(pollStatuses, 1500);
 setInterval(pollStatuses, STATUS_MS);
 
-// 새로고침 전에 확대해서 보고 있던 프린터가 있으면 그대로 복원
+// 확대 중이던 프린터 복원
 (function restoreFocus() {
   const savedIp = localStorage.getItem(FOCUS_IP_KEY);
   if (!savedIp) return;

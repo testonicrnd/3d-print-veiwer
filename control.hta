@@ -104,8 +104,7 @@ Dim oShell, oFso
 Set oShell = CreateObject("WScript.Shell")
 Set oFso   = CreateObject("Scripting.FileSystemObject")
 
-' 이 HTA 파일이 어느 경로에 있든(어느 컴퓨터에 clone했든) 항상 자기 자신과 같은 폴더의
-' start.vbs / tray.ps1을 가리키도록, 하드코딩된 절대경로 대신 여기서 직접 계산한다.
+' 이 HTA가 있는 폴더 (start.vbs / tray.ps1 위치)
 Function ScriptDir()
     Dim p
     p = document.location.pathname

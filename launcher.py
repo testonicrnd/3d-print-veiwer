@@ -6,8 +6,7 @@ import sys
 import os
 import base64
 
-# 3D 프린트 뷰어 전용 런처 — server.py만 띄운다. 사내망 IP로 접속하는 사내 PC(예: 사무실 미니PC) 기준.
-# 절대경로 대신 이 스크립트 파일 위치 기준 상대경로를 써서, 어느 경로에 clone해도 동작한다.
+# server.py를 띄우고, 사내망 접속 주소를 알림 + 브라우저로 보여주는 런처
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def notify(title, msg):
@@ -35,7 +34,7 @@ def is_port_in_use(port):
         return s.connect_ex(("127.0.0.1", port)) == 0
 
 def get_lan_ip():
-    # 실제로 데이터를 보내지 않고, OS가 8.8.8.8로 나갈 때 쓸 로컬 IP가 뭔지만 물어보는 트릭
+    # 실제 전송 없이, 외부로 나갈 때 쓰이는 로컬(LAN) IP만 조회
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("8.8.8.8", 80))
@@ -61,7 +60,7 @@ time.sleep(2)
 lan_ip = get_lan_ip()
 print_url = f"http://{lan_ip}:8080/"
 notify("3D 프린트 서버", f"준비 완료\n{print_url}")
-# 자동 업데이트(update.ps1)로 재시작될 때는 --no-browser로 띄워서, 업데이트마다 탭이 쌓이지 않게 한다
+# 자동 업데이트로 재시작될 때(--no-browser)는 브라우저 탭을 새로 열지 않음
 if "--no-browser" not in sys.argv:
     webbrowser.open(print_url)
 

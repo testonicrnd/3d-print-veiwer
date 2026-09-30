@@ -1,15 +1,7 @@
-# Run once on a machine to make it check GitHub for updates every hour
-# automatically (pulls latest code, reinstalls deps, restarts the server only if
-# something actually changed). No more manually re-running update.ps1.
-# NOTE: messages are kept in plain ASCII on purpose - Korean text here has been
-# observed to garble in some console codepages when this runs unattended.
-#
-# NOTE: wrapped in try/finally with a Read-Host at the end so the window stays
-# open when a person double-clicks this to run it manually (otherwise the window
-# closes the instant the script exits, even on error, before anyone can read it).
-# The hourly scheduled task passes -Unattended so THAT run never waits for a
-# keypress nobody is there to give - without this, every hourly run left behind
-# a stuck PowerShell window forever waiting at the prompt.
+# Syncs this checkout to GitHub (origin/main) and restarts the server only if the code changed.
+# Run by the 3DPrintViewerAutoUpdate scheduled task (with -Unattended), or double-click to run manually.
+# Messages are plain ASCII - Korean text can garble in some console codepages.
+# Without -Unattended the window waits for Enter at the end so the output can be read.
 param([switch]$Unattended)
 
 try {
@@ -31,11 +23,8 @@ try {
         exit 1
     }
 
-    # This checkout only ever exists to mirror GitHub - there's no legitimate reason for
-    # local edits to any tracked file here. Hard-reset to origin/main instead of pulling
-    # so neither a stray local change (e.g. line-ending conversion) nor a force-pushed
-    # (rewritten) history on GitHub can ever block the update. Untracked files like .env
-    # are left alone.
+    # This checkout just mirrors GitHub: hard-reset instead of pull so local edits or a
+    # force-pushed history never block the update. Untracked files (.env) are kept.
     git reset --hard origin/main
 
     $after = git rev-parse HEAD

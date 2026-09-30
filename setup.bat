@@ -1,16 +1,11 @@
 @echo off
 setlocal
 
-rem One-time setup script for a new machine (e.g. office mini PC).
-rem Copy just this file over and double-click it - it clones the repo,
-rem installs dependencies, and registers auto-start on login.
+rem One-time setup for a new PC: clones the repo, installs dependencies,
+rem and registers auto-start on login + hourly auto-update.
 rem
-rem NOTE: this script deliberately avoids forward "goto" jumps placed after any
-rem external command that prints output (git, pip) inside a parenthesized
-rem if/else block - that combination has been observed to corrupt cmd.exe's
-rem label lookup ("the system cannot find the batch label specified"). Where a
-rem branch is needed after such a command, this script uses "call :label" +
-rem "exit /b" (a subroutine that returns) instead of a forward goto.
+rem NOTE: avoid forward "goto" after external commands (git, pip) inside
+rem parenthesized if/else blocks - it can break cmd.exe's label lookup.
 
 set "REPO_URL=https://github.com/testonicrnd/3d-print-veiwer.git"
 set "REPO_DIR=%USERPROFILE%\3d-print-veiwer"

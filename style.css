@@ -1106,8 +1106,7 @@ h1 span { color: var(--accent); }
   max-width: 320px;
   animation: toastIn 0.28s var(--ease) both;
 }
-/* 배너 등에 쓰는 --error-bg는 다크모드에서 10% 투명도라 토스트에 그대로 쓰면 뒤에 깔린
-   글자와 겹쳐 보여서 안 읽혔다 — 토스트는 항상 진하고 불투명한 배경으로 확실히 가려지게 함 */
+/* 토스트는 뒤 글자와 겹쳐 보이지 않도록 불투명 배경 사용 (--error-bg는 반투명) */
 .toast.error   { background: #c62828; color: #fff; border-color: #c62828; }
 .toast.success { background: #2e7d32; color: #fff; border-color: #2e7d32; }
 .toast.out { animation: toastOut 0.22s var(--ease) both; }

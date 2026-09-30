@@ -1,3 +1,4 @@
+# TESTONIC R&D - 3D Print Viewer
 # Syncs this checkout to GitHub (origin/main) and restarts the server only if the code changed.
 # Run by the 3DPrintViewerAutoUpdate scheduled task (with -Unattended), or double-click to run manually.
 # Messages are plain ASCII - Korean text can garble in some console codepages.

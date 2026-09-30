@@ -1,7 +1,8 @@
+﻿# TESTONIC R&D - 3D Print Viewer
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-Add-Type -Name WinUser -Namespace AirmaxTray -MemberDefinition @'
+Add-Type -Name WinUser -Namespace PrintViewerTray -MemberDefinition @'
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
 '@
@@ -19,16 +20,16 @@ $script:shown  = $true
 
 $ni            = New-Object System.Windows.Forms.NotifyIcon
 $ni.Icon       = [System.Drawing.SystemIcons]::Application
-$ni.Text       = "AIRMAX 서버"
+$ni.Text       = "3D Print Viewer"
 $ni.Visible    = $true
 
 function Toggle {
     if ($script:shown) {
-        [AirmaxTray.WinUser]::ShowWindow($hwnd, 0) | Out-Null
+        [PrintViewerTray.WinUser]::ShowWindow($hwnd, 0) | Out-Null
         $script:shown = $false
     } else {
-        [AirmaxTray.WinUser]::ShowWindow($hwnd, 9) | Out-Null
-        [AirmaxTray.WinUser]::SetForegroundWindow($hwnd) | Out-Null
+        [PrintViewerTray.WinUser]::ShowWindow($hwnd, 9) | Out-Null
+        [PrintViewerTray.WinUser]::SetForegroundWindow($hwnd) | Out-Null
         $script:shown = $true
     }
 }

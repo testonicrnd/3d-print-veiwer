@@ -1,3 +1,4 @@
+# TESTONIC R&D — 3D Print Viewer
 from flask import Flask, Response, send_file, request as freq
 import requests
 import websocket
@@ -230,5 +231,5 @@ def thumbnail(ip, gcode_filename):
     return "", 404
 
 if __name__ == "__main__":
-    print("AIRMAX 3D 프린터 서버 시작 (포트 8080)")
+    print("3D Print Viewer 서버 시작 (포트 8080)")
     app.run(host="0.0.0.0", port=8080, threaded=True)

@@ -1,3 +1,4 @@
+# TESTONIC R&D - 3D Print Viewer
 # Registers a scheduled task that runs update.ps1 every hour
 # (syncs with GitHub, restarts the server only if the code changed).
 

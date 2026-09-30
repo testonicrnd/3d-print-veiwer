@@ -1,4 +1,5 @@
 @echo off
+rem TESTONIC R&D - 3D Print Viewer
 setlocal
 
 rem One-time setup for a new PC: clones the repo, installs dependencies,

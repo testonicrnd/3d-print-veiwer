@@ -87,7 +87,6 @@ const thumbTimers = new Map();
 const statusCache = new Map();
 const brokenSet   = new Set();
 
-let focusTimer    = null;
 let allViewers    = [];
 let activeViewers = [];
 
@@ -442,11 +441,6 @@ function startThumbPoll(viewer) {
 
   thumbTimers.set(viewer, null);
   tick();
-}
-
-function stopThumbPoll(viewer) {
-  const t = thumbTimers.get(viewer);
-  if (t !== undefined) { clearTimeout(t); thumbTimers.delete(viewer); }
 }
 
 /* ══════════════════════════════════════════

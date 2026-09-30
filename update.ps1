@@ -25,7 +25,7 @@ try {
     }
 
     # This checkout just mirrors GitHub: hard-reset instead of pull so local edits or a
-    # force-pushed history never block the update. Untracked files (.env) are kept.
+    # force-pushed history never block the update. Untracked files are kept.
     git reset --hard origin/main
 
     $after = git rev-parse HEAD

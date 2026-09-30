@@ -24,7 +24,7 @@
 ### 출력 제어
 - 일시정지 / 재개
 - G-code 파일 브라우저에서 원격 출력 시작
-- 출력 히스토리 조회 (완료 / 미완료 / 취소 / 오류)
+- 출력 히스토리 조회 (완료 / 미완료 / 오류)
 
 ### 타임랩스
 - 프린터별 타임랩스 영상 목록 조회 및 모달 재생
@@ -74,7 +74,7 @@ Git과 Python이 설치되어 있어야 합니다(Python 설치 시 "Add python.
 `main`에 푸시하면 사내 PC가 1시간 안에 자동으로 받아서 적용합니다(`3DPrintViewerAutoUpdate` 작업).
 
 - `update.ps1`이 `git fetch` 후 `origin/main`으로 맞추고(`reset --hard`), 코드가 바뀐 경우에만 패키지 설치 + 서버 재시작
-- 로컬 수정은 버려지고, `.env`처럼 git이 관리하지 않는 파일은 유지
+- 로컬 수정은 버려지고, git이 관리하지 않는 파일은 유지
 - 바로 적용하려면 `update.ps1`을 더블클릭하거나 `Start-ScheduledTask -TaskName '3DPrintViewerAutoUpdate'` 실행
 
 ## 수동 실행

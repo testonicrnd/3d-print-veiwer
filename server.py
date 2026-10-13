@@ -6,10 +6,7 @@ import json
 import os
 import hashlib
 import uuid
-import re
-import base64
-import socket
-import ipaddress
+import webrtc_cam
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -111,12 +108,28 @@ def version():
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
+# 신규 펌웨어(K1A 등)로 확인된 프린터 — 8080 MJPEG이 없고 8000 WebRTC로만 카메라를 제공
+WEBRTC_IPS = set()
+
+def webrtc_proxy(ip, action):
+    if action == "snapshot":
+        data = webrtc_cam.snapshot(ip)
+        if data is None:
+            WEBRTC_IPS.discard(ip)   # 다음 요청에서 카메라 방식부터 다시 확인
+            return "연결 오류", 502
+        return Response(data, content_type="image/jpeg")
+    return Response(webrtc_cam.mjpeg_stream(ip), content_type="multipart/x-mixed-replace; boundary=frame")
+
 @app.route("/proxy/<ip>/")
 def proxy_stream(ip):
+    """기존 펌웨어는 8080 MJPEG을 그대로 중계, 안 되면 WebRTC 카메라를 MJPEG/JPEG로 변환해 제공"""
     if ip not in ALLOWED_IPS:
         return "Not allowed", 403
 
     action = freq.args.get("action", "stream")
+    if ip in WEBRTC_IPS:
+        return webrtc_proxy(ip, action)
+
     target = f"http://{ip}:8080/?action={action}"
 
     try:
@@ -134,70 +147,11 @@ def proxy_stream(ip):
         return Response(generate(), content_type=content_type)
 
     except Exception as e:
+        if webrtc_cam.is_webrtc_camera(ip):
+            WEBRTC_IPS.add(ip)
+            return webrtc_proxy(ip, action)
         print(f"[연결 오류] {ip}: {e}")
         return "연결 오류", 502
-
-# 카메라 방식 판별 — 기존 펌웨어는 MJPEG(8080), 신규 펌웨어(K1A 등)는 WebRTC(8000)
-CAMERA_TYPES = {}
-
-def detect_camera(ip):
-    try:
-        r = requests.get(f"http://{ip}:8080/?action=snapshot", timeout=3)
-        if r.status_code == 200 and r.headers.get("Content-Type", "").startswith("image/"):
-            return "mjpeg"
-    except Exception:
-        pass
-    try:
-        r = requests.post(f"http://{ip}:8000/call/webrtc_local", data="", timeout=3)
-        if r.status_code == 200:
-            return "webrtc"
-    except Exception:
-        pass
-    return None
-
-@app.route("/api/camera/<ip>")
-def camera_type(ip):
-    if ip not in ALLOWED_IPS:
-        return "Not allowed", 403
-    if freq.args.get("refresh") or not CAMERA_TYPES.get(ip):
-        CAMERA_TYPES[ip] = detect_camera(ip)
-    return Response(json.dumps({"type": CAMERA_TYPES[ip]}), content_type="application/json")
-
-def local_ip_toward(ip):
-    """프린터로 나가는 이 PC의 LAN IP"""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect((ip, 9))
-        return s.getsockname()[0]
-    finally:
-        s.close()
-
-@app.route("/api/webrtc/<ip>", methods=["POST"])
-def webrtc_signal(ip):
-    """브라우저 offer를 프린터에 중계하고 answer를 돌려줌.
-    브라우저는 자기 IP를 xxx.local(mDNS)로 숨기는데 프린터는 이를 해석하지 못하므로
-    접속한 클라이언트의 실제 IP로 바꿔서 보냄"""
-    if ip not in ALLOWED_IPS:
-        return "Not allowed", 403
-    offer = freq.get_json(silent=True) or {}
-    sdp = offer.get("sdp", "")
-    if not sdp:
-        return Response(json.dumps({"error": "sdp required"}), content_type="application/json"), 400
-
-    client_ip = freq.remote_addr or ""
-    if not client_ip or ipaddress.ip_address(client_ip).is_loopback:
-        client_ip = local_ip_toward(ip)
-    sdp = re.sub(r"^(a=candidate:\S+ \d+ \S+ \d+ )\S+\.local( )", rf"\g<1>{client_ip}\g<2>", sdp, flags=re.M)
-
-    body = base64.b64encode(json.dumps({"type": "offer", "sdp": sdp}).encode()).decode()
-    try:
-        r = requests.post(f"http://{ip}:8000/call/webrtc_local", data=body,
-                          headers={"Content-Type": "text/plain"}, timeout=10)
-        answer = json.loads(base64.b64decode(r.text))
-        return Response(json.dumps(answer), content_type="application/json")
-    except Exception as e:
-        print(f"[WebRTC 시그널링 오류] {ip}: {e}")
-        return Response(json.dumps({"error": str(e)}), content_type="application/json"), 502
 
 @app.route("/api/status/<ip>")
 def printer_status(ip):

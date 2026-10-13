@@ -436,14 +436,12 @@ h1 span { color: var(--accent); }
   aspect-ratio: 16/9;
   overflow: hidden;
 }
-.viewer-body img,
-.viewer-body video {
+.viewer-body img {
   width: 100%; height: 100%;
   object-fit: cover; display: block;
   transition: transform 0.4s var(--ease);
 }
-.viewer:hover .viewer-body img,
-.viewer:hover .viewer-body video { transform: scale(1.03); }
+.viewer:hover .viewer-body img { transform: scale(1.03); }
 
 .viewer-badge {
   position: absolute; bottom: 5px; right: 6px;
@@ -610,18 +608,15 @@ h1 span { color: var(--accent); }
 }
 .focus-body.visible { display: flex; }
 
-.focus-body img,
-.focus-body video {
+.focus-body img {
   width: 100%; height: 100%;
   object-fit: contain; display: block;
 }
-.focus-body img.hidden,
-.focus-body video.hidden { display: none; }
 
 @keyframes slideInFromRight { from { opacity:0; transform: translateX(44px); } to { opacity:1; transform: none; } }
 @keyframes slideInFromLeft  { from { opacity:0; transform: translateX(-44px); } to { opacity:1; transform: none; } }
-.focus-body .slide-in     { animation: slideInFromRight 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
-.focus-body .slide-in-rev { animation: slideInFromLeft  0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+.focus-body img.slide-in     { animation: slideInFromRight 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+.focus-body img.slide-in-rev { animation: slideInFromLeft  0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 
 /* ── 로딩 오버레이 ── */
 .loading-overlay {

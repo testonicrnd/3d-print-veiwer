@@ -6,6 +6,10 @@ import json
 import os
 import hashlib
 import uuid
+import re
+import base64
+import socket
+import ipaddress
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -132,6 +136,68 @@ def proxy_stream(ip):
     except Exception as e:
         print(f"[연결 오류] {ip}: {e}")
         return "연결 오류", 502
+
+# 카메라 방식 판별 — 기존 펌웨어는 MJPEG(8080), 신규 펌웨어(K1A 등)는 WebRTC(8000)
+CAMERA_TYPES = {}
+
+def detect_camera(ip):
+    try:
+        r = requests.get(f"http://{ip}:8080/?action=snapshot", timeout=3)
+        if r.status_code == 200 and r.headers.get("Content-Type", "").startswith("image/"):
+            return "mjpeg"
+    except Exception:
+        pass
+    try:
+        r = requests.post(f"http://{ip}:8000/call/webrtc_local", data="", timeout=3)
+        if r.status_code == 200:
+            return "webrtc"
+    except Exception:
+        pass
+    return None
+
+@app.route("/api/camera/<ip>")
+def camera_type(ip):
+    if ip not in ALLOWED_IPS:
+        return "Not allowed", 403
+    if freq.args.get("refresh") or not CAMERA_TYPES.get(ip):
+        CAMERA_TYPES[ip] = detect_camera(ip)
+    return Response(json.dumps({"type": CAMERA_TYPES[ip]}), content_type="application/json")
+
+def local_ip_toward(ip):
+    """프린터로 나가는 이 PC의 LAN IP"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect((ip, 9))
+        return s.getsockname()[0]
+    finally:
+        s.close()
+
+@app.route("/api/webrtc/<ip>", methods=["POST"])
+def webrtc_signal(ip):
+    """브라우저 offer를 프린터에 중계하고 answer를 돌려줌.
+    브라우저는 자기 IP를 xxx.local(mDNS)로 숨기는데 프린터는 이를 해석하지 못하므로
+    접속한 클라이언트의 실제 IP로 바꿔서 보냄"""
+    if ip not in ALLOWED_IPS:
+        return "Not allowed", 403
+    offer = freq.get_json(silent=True) or {}
+    sdp = offer.get("sdp", "")
+    if not sdp:
+        return Response(json.dumps({"error": "sdp required"}), content_type="application/json"), 400
+
+    client_ip = freq.remote_addr or ""
+    if not client_ip or ipaddress.ip_address(client_ip).is_loopback:
+        client_ip = local_ip_toward(ip)
+    sdp = re.sub(r"^(a=candidate:\S+ \d+ \S+ \d+ )\S+\.local( )", rf"\g<1>{client_ip}\g<2>", sdp, flags=re.M)
+
+    body = base64.b64encode(json.dumps({"type": "offer", "sdp": sdp}).encode()).decode()
+    try:
+        r = requests.post(f"http://{ip}:8000/call/webrtc_local", data=body,
+                          headers={"Content-Type": "text/plain"}, timeout=10)
+        answer = json.loads(base64.b64decode(r.text))
+        return Response(json.dumps(answer), content_type="application/json")
+    except Exception as e:
+        print(f"[WebRTC 시그널링 오류] {ip}: {e}")
+        return Response(json.dumps({"error": str(e)}), content_type="application/json"), 502
 
 @app.route("/api/status/<ip>")
 def printer_status(ip):

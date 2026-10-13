@@ -44,6 +44,7 @@ const focusBody       = document.getElementById("focusBody");
 const focusFooter     = document.getElementById("focusFooter");
 const focusTitle      = document.getElementById("focusTitle");
 const focusImg        = document.getElementById("focusImg");
+const focusVideo      = document.getElementById("focusVideo");
 const focusInfo       = document.getElementById("focusInfo");
 const loadingOverlay  = document.getElementById("loadingOverlay");
 const progressBar     = document.getElementById("progressBar");
@@ -88,6 +89,8 @@ let infoLoaded    = null;
 const thumbTimers = new Map();
 const statusCache = new Map();
 const brokenSet   = new Set();
+const camTypes    = new Map();   // ip → "mjpeg" | "webrtc" | null
+const rtcConns    = new Map();   // ip → { pc, stream }
 
 let allViewers    = [];
 let activeViewers = [];
@@ -342,6 +345,30 @@ function scrollToViewer(viewer) {
   viewer.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
+function focusedIp() {
+  return currentIndex >= 0 ? allViewers[currentIndex].dataset.ip : null;
+}
+
+function focusReady(el, direction) {
+  loadingOverlay.classList.remove("show");
+  const cls = direction === "right" ? "slide-in-rev" : "slide-in";
+  requestAnimationFrame(() => {
+    el.classList.add(cls);
+    el.addEventListener("animationend", () => el.classList.remove(cls), { once: true });
+  });
+  if (!isPinned) scheduleNext();
+}
+
+// WebRTC 프린터 — 카드에서 이미 받고 있는 스트림을 확대 화면에 같이 붙임
+async function attachFocusStream(ip, direction) {
+  const conn = rtcConns.get(ip);
+  if (!conn || !conn.stream || focusedIp() !== ip) return;
+  if (focusVideo.srcObject === conn.stream) return;
+  focusVideo.srcObject = conn.stream;
+  await focusVideo.play().catch(() => {});
+  if (focusedIp() === ip) focusReady(focusVideo, direction);
+}
+
 function openFocus(viewer, direction = "left") {
   stopAutoSlide();
 
@@ -357,26 +384,34 @@ function openFocus(viewer, direction = "left") {
 
   loadingOverlay.classList.add("show");
   focusImg.classList.remove("slide-in", "slide-in-rev");
+  focusVideo.classList.remove("slide-in", "slide-in-rev");
+  focusImg.onload  = null;
+  focusImg.onerror = null;
 
-  focusImg.onload = () => {
-    focusImg.onload  = null;
-    focusImg.onerror = null;
-    loadingOverlay.classList.remove("show");
-    const cls = direction === "right" ? "slide-in-rev" : "slide-in";
-    requestAnimationFrame(() => {
-      focusImg.classList.add(cls);
-      focusImg.addEventListener("animationend", () => focusImg.classList.remove(cls), { once: true });
-    });
-    if (!isPinned) scheduleNext();
-  };
-  focusImg.onerror = () => {
-    focusImg.onload  = null;
-    focusImg.onerror = null;
-    loadingOverlay.classList.remove("show");
-    markBroken(viewer);
-    closeFocus();
-  };
-  focusImg.src = `/proxy/${ip}/?action=stream`;
+  if (camTypes.get(ip) === "webrtc") {
+    focusImg.src = "";
+    focusImg.classList.add("hidden");
+    focusVideo.classList.remove("hidden");
+    focusVideo.srcObject = null;
+    attachFocusStream(ip, direction);   // 아직 연결 전이면 ontrack에서 붙음
+  } else {
+    focusVideo.srcObject = null;
+    focusVideo.classList.add("hidden");
+    focusImg.classList.remove("hidden");
+    focusImg.onload = () => {
+      focusImg.onload  = null;
+      focusImg.onerror = null;
+      focusReady(focusImg, direction);
+    };
+    focusImg.onerror = () => {
+      focusImg.onload  = null;
+      focusImg.onerror = null;
+      loadingOverlay.classList.remove("show");
+      markBroken(viewer);
+      closeFocus();
+    };
+    focusImg.src = `/proxy/${ip}/?action=stream`;
+  }
 
   showFocusUI(true);
 
@@ -395,6 +430,7 @@ function closeFocus() {
   focusImg.onload  = null;
   focusImg.onerror = null;
   focusImg.src = "";
+  focusVideo.srcObject = null;
   loadingOverlay.classList.remove("show");
   showFocusUI(false);
   focusInfo.textContent = "—";
@@ -421,8 +457,7 @@ function startThumbPoll(viewer) {
 
   function schedule() {
     if (!thumbTimers.has(viewer)) return;
-    const delay = brokenSet.has(viewer) ? RETRY_MS : THUMB_MS;
-    thumbTimers.set(viewer, setTimeout(tick, delay));
+    thumbTimers.set(viewer, setTimeout(tick, THUMB_MS));
   }
 
   function tick() {
@@ -436,14 +471,124 @@ function startThumbPoll(viewer) {
     };
     tmp.onerror = () => {
       if (!thumbTimers.has(viewer)) return;
+      // 끊겼으면 카메라 방식부터 다시 확인 (펌웨어 업데이트로 WebRTC로 바뀌었을 수 있음)
+      thumbTimers.delete(viewer);
       markBroken(viewer);
-      schedule();
+      setupCamera(viewer, true);
     };
     tmp.src = snapshotUrl(ip) + "&_t=" + Date.now();
   }
 
   thumbTimers.set(viewer, null);
   tick();
+}
+
+/* ══════════════════════════════════════════
+   CAMERA SETUP — 기존 MJPEG(8080) 우선, 안 되면 WebRTC(8000)
+══════════════════════════════════════════ */
+function setCardMedia(viewer, tag) {
+  const body = viewer.querySelector(".viewer-body");
+  const cur  = body.querySelector("img, video");
+  if (cur && cur.tagName.toLowerCase() === tag) return cur;
+  const el = document.createElement(tag);
+  if (tag === "video") { el.autoplay = true; el.muted = true; el.playsInline = true; }
+  cur ? cur.replaceWith(el) : body.prepend(el);
+  return el;
+}
+
+async function setupCamera(viewer, refresh = false) {
+  const ip = viewer.dataset.ip;
+  let type = null;
+  try {
+    const r = await fetch(`/api/camera/${ip}${refresh ? "?refresh=1" : ""}`);
+    type = (await r.json()).type;
+  } catch(e) {}
+  camTypes.set(ip, type);
+
+  if (type === "mjpeg") {
+    rtcClose(ip);
+    setCardMedia(viewer, "img");
+    startThumbPoll(viewer);
+  } else if (type === "webrtc") {
+    setCardMedia(viewer, "video");
+    rtcConnect(viewer);
+  } else {
+    markBroken(viewer);
+    if (focusedIp() === ip) closeFocus();
+    setTimeout(() => setupCamera(viewer, true), RETRY_MS);
+  }
+}
+
+/* ══════════════════════════════════════════
+   WEBRTC — 신규 펌웨어 카메라
+   시그널링은 서버(/api/webrtc)가 중계, 영상은 프린터 → 브라우저 직접
+══════════════════════════════════════════ */
+function rtcClose(ip) {
+  const conn = rtcConns.get(ip);
+  if (!conn) return;
+  rtcConns.delete(ip);
+  clearTimeout(conn.timer);
+  conn.pc.close();
+}
+
+async function rtcConnect(viewer) {
+  const ip = viewer.dataset.ip;
+  rtcClose(ip);
+
+  const pc   = new RTCPeerConnection();
+  const conn = { pc, stream: null, timer: null };
+  rtcConns.set(ip, conn);
+  const alive = () => rtcConns.get(ip) === conn;
+
+  const fail = () => {
+    if (!alive()) return;
+    rtcClose(ip);
+    markBroken(viewer);
+    if (focusedIp() === ip) closeFocus();
+    setTimeout(() => setupCamera(viewer, true), RETRY_MS);
+  };
+  conn.timer = setTimeout(() => { if (pc.connectionState !== "connected") fail(); }, 20_000);
+
+  pc.addTransceiver("video", { direction: "sendrecv" });
+  pc.ontrack = e => {
+    if (!alive()) return;
+    conn.stream = e.streams[0] || new MediaStream([e.track]);
+    const v = viewer.querySelector(".viewer-body video");
+    if (v) v.srcObject = conn.stream;
+    attachFocusStream(ip);
+  };
+  pc.onconnectionstatechange = () => {
+    if (!alive()) return;
+    if (pc.connectionState === "connected") {
+      clearTimeout(conn.timer);
+      markRecovered(viewer);
+    } else if (pc.connectionState === "failed") {
+      fail();
+    }
+  };
+
+  try {
+    await pc.setLocalDescription(await pc.createOffer());
+    // 프린터는 trickle ICE를 받지 않으므로 후보 수집이 끝난 offer를 한 번에 보냄
+    await new Promise(r => {
+      if (pc.iceGatheringState === "complete") return r();
+      pc.onicegatheringstatechange = () => pc.iceGatheringState === "complete" && r();
+      setTimeout(r, 2000);
+    });
+    if (!alive()) return;
+    const r = await fetch(`/api/webrtc/${ip}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sdp: pc.localDescription.sdp }),
+    });
+    const answer = await r.json();
+    if (!alive()) return;
+    if (!answer.sdp) throw new Error(answer.error || "no answer");
+    await pc.setRemoteDescription(answer);
+  } catch(e) {
+    console.warn(`[WebRTC] ${ip}`, e);
+    fail();
+  }
 }
 
 /* ══════════════════════════════════════════
@@ -818,16 +963,17 @@ async function startLivePip() {
   }
 
   const label = focusTitle.textContent || "";
+  const src   = focusVideo.classList.contains("hidden") ? focusImg : focusVideo;
 
   const canvas = document.createElement("canvas");
-  const w = focusImg.naturalWidth  || 640;
-  const h = focusImg.naturalHeight || 480;
+  const w = src.naturalWidth  || src.videoWidth  || 640;
+  const h = src.naturalHeight || src.videoHeight || 480;
   canvas.width  = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
 
   function drawFrame() {
-    ctx.drawImage(focusImg, 0, 0, w, h);
+    ctx.drawImage(src, 0, 0, w, h);
     const fontSize = Math.max(16, Math.round(h * 0.045));
     const barH     = Math.round(fontSize * 1.9);
     ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
@@ -947,6 +1093,7 @@ function reconnectFocus() {
   if (currentIndex === -1) return;
   const ip = allViewers[currentIndex].dataset.ip;
   streamStale = false;
+  if (camTypes.get(ip) !== "mjpeg") return;   // WebRTC는 프린터와 직접 연결이라 서버 재시작과 무관
   focusImg.onload  = () => { focusImg.onload = null; focusImg.onerror = null; };
   focusImg.onerror = () => { focusImg.onload = null; focusImg.onerror = null; streamStale = true; };
   focusImg.src = `/proxy/${ip}/?action=stream&_r=${Date.now()}`;
@@ -976,17 +1123,18 @@ updateBadgeBtn.addEventListener("click", () => location.reload());
 /* ══════════════════════════════════════════
    INIT
 ══════════════════════════════════════════ */
-allViewers.forEach(v => startThumbPoll(v));
+const cameraReady = Promise.all(allViewers.map(v => setupCamera(v)));
 setTimeout(pollStatuses, 1500);
 setInterval(pollStatuses, STATUS_MS);
 checkServer();
 setInterval(checkServer, VERSION_MS);
 
 // 확대 중이던 프린터와 핀 고정 상태 복원
-(function restoreFocus() {
+(async function restoreFocus() {
   if (localStorage.getItem(PINNED_KEY) === "1") setPinned(true);
   const savedIp = localStorage.getItem(FOCUS_IP_KEY);
   if (!savedIp) return;
+  await cameraReady;   // 카메라 방식(MJPEG/WebRTC)을 알아야 확대 화면을 열 수 있음
   const viewer = activeViewers.find(v => v.dataset.ip === savedIp);
   if (viewer) openFocus(viewer);
 })();
